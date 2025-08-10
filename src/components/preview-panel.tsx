@@ -7,7 +7,6 @@ import { generateScripts, formatName } from '@/lib/course-utils';
 import { generateZip } from '@/lib/zip-utils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Folder, File, Download, Loader2, Code, Terminal, AlertTriangle, ChevronDown } from 'lucide-react';
@@ -25,13 +24,6 @@ interface PreviewPanelProps {
 export function PreviewPanel({ course, setCourse, config, error, isLoading, setIsLoading }: PreviewPanelProps) {
   const [isZipping, setIsZipping] = useState(false);
   const { toast } = useToast();
-
-  const handleFileChange = (sectionIndex: number, topicIndex: number, newFiles: string) => {
-    if (!course) return;
-    const newCourse = [...course];
-    newCourse[sectionIndex].topics[topicIndex].files = newFiles;
-    setCourse(newCourse);
-  };
 
   const handleDownload = async (type: 'zip' | 'bash' | 'cmd') => {
     if (!course) return;
@@ -115,7 +107,7 @@ export function PreviewPanel({ course, setCourse, config, error, isLoading, setI
               </div>
               <ul className="pl-6 mt-1 space-y-1 border-l border-border ml-2">
                 {section.topics.map((topic, topicIndex) => {
-                  const filesPerTopic = (topic.files || 'notes.md').split(',').map(f => f.trim()).filter(Boolean);
+                  const filesPerTopic = (topic.files || '').split(',').map(f => f.trim()).filter(Boolean);
                   return (
                   <li key={topic.title + topicIndex}>
                      <div className="flex items-center">
@@ -123,19 +115,10 @@ export function PreviewPanel({ course, setCourse, config, error, isLoading, setI
                       <span>{formatName('{index_padded}. {title}', { index: topic.index, title: topic.title, section_index: section.index, section_title: section.title })}</span>
                     </div>
                     <div className="pl-6 mt-2 space-y-2 border-l border-border ml-2">
-                      <div className="flex items-center gap-2">
-                         <File className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                         <Input 
-                            value={topic.files || ''}
-                            onChange={(e) => handleFileChange(sectionIndex, topicIndex, e.target.value)}
-                            placeholder="e.g. notes.md, main.py"
-                            className="h-8 text-xs"
-                         />
-                      </div>
                       <ul className="pl-1 space-y-1">
                           {filesPerTopic.map(file => (
                             <li key={file} className="flex items-center">
-                              <div className="w-4 mr-2" />
+                              <File className="h-4 w-4 mr-2 text-muted-foreground flex-shrink-0" />
                               <span className="text-muted-foreground text-xs font-mono">{file}</span>
                             </li>
                           ))}

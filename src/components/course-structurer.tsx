@@ -9,6 +9,7 @@ export function CourseStructurer() {
   const [course, setCourse] = useState<Course | null>(null);
   const [config, setConfig] = useState<StructureConfig>({
     sectionDirFormat: '{index_padded}. {title}',
+    filesInTopic: 'notes.md',
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

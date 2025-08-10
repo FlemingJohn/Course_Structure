@@ -2,7 +2,7 @@ export interface Topic {
   title: string;
   timestamp?: string;
   index: number;
-  files?: string;
+  files: string;
 }
 
 export interface Section {
@@ -15,6 +15,7 @@ export type Course = Section[];
 
 export interface StructureConfig {
   sectionDirFormat: string;
+  filesInTopic: string;
 }
 
 const cleanTitle = (title: string): string => {
@@ -24,7 +25,7 @@ const cleanTitle = (title: string): string => {
   return title.replace(emojiRegex, '').replace(hashtagRegex, '').trim();
 };
 
-export const parseTimestamps = (text: string): Course => {
+export const parseTimestamps = (text: string, config: StructureConfig): Course => {
   const lines = text.split('\n').filter(line => line.trim() !== '');
   const course: Course = [];
   let currentSection: Section | null = null;
@@ -46,7 +47,7 @@ export const parseTimestamps = (text: string): Course => {
       }
       topicIndex++;
       const title = cleanedLine.replace(timestampRegex, '').replace(/[-–—]/, '').trim();
-      currentSection.topics.push({ title, timestamp: timestampMatch[0], index: topicIndex, files: 'notes.md' });
+      currentSection.topics.push({ title, timestamp: timestampMatch[0], index: topicIndex, files: config.filesInTopic });
     } else {
       if(cleanedLine) {
         sectionIndex++;

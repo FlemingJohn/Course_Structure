@@ -16,8 +16,8 @@ import { FileText, Settings } from 'lucide-react';
 
 interface InputPanelProps {
   setCourse: (course: Course | null) => void;
-  config: Omit<StructureConfig, 'filesInTopic'>;
-  setConfig: (config: Omit<StructureConfig, 'filesInTopic'>) => void;
+  config: StructureConfig;
+  setConfig: (config: StructureConfig) => void;
   isLoading: boolean;
   setIsLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
@@ -27,7 +27,7 @@ const formSchema = z.object({
   timestamps: z.string().min(1, 'Timestamps cannot be empty.'),
 });
 
-export function InputPanel({ setCourse, config, setConfig, isLoading, setError }: InputPanelProps) {
+export function InputPanel({ setCourse, config, setConfig, isLoading, setIsLoading, setError }: InputPanelProps) {
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -39,7 +39,7 @@ export function InputPanel({ setCourse, config, setConfig, isLoading, setError }
 
   const handleParse = (values: z.infer<typeof formSchema>) => {
     try {
-      const parsedCourse = parseTimestamps(values.timestamps);
+      const parsedCourse = parseTimestamps(values.timestamps, config);
       if (parsedCourse.length === 0) {
         throw new Error("Couldn't find any sections or topics. Check the format.");
       }
@@ -101,6 +101,15 @@ export function InputPanel({ setCourse, config, setConfig, isLoading, setError }
               id="section-format"
               value={config.sectionDirFormat}
               onChange={(e) => setConfig({ ...config, sectionDirFormat: e.target.value })}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="file-format">Default Files per Topic</Label>
+            <Input
+              id="file-format"
+              value={config.filesInTopic}
+              onChange={(e) => setConfig({ ...config, filesInTopic: e.target.value })}
+              placeholder="e.g. notes.md, main.py"
             />
           </div>
         </div>
