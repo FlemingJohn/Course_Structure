@@ -8,31 +8,49 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Folder, File, Download, Loader2, Code, Terminal, AlertTriangle, ChevronDown } from 'lucide-react';
+import { Folder, File, Download, Loader2, Code, Terminal, AlertTriangle, ChevronDown, Sparkles } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 interface PreviewPanelProps {
   course: Course | null;
   config: StructureConfig;
   error: string | null;
   isLoading: boolean;
+  setIsLoading: (loading: boolean) => void;
 }
 
-export function PreviewPanel({ course, config, error, isLoading }: PreviewPanelProps) {
+export function PreviewPanel({ course, config, error, isLoading, setIsLoading }: PreviewPanelProps) {
   const [isZipping, setIsZipping] = useState(false);
+  const { toast } = useToast();
 
   const handleDownload = async (type: 'zip' | 'bash' | 'cmd') => {
     if (!course) return;
 
     if (type === 'zip') {
       setIsZipping(true);
-      const blob = await generateZip(course, config);
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = 'course_structure.zip';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      setIsZipping(false);
+      setIsLoading(true);
+      try {
+        const blob = await generateZip(course, config);
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'course_structure.zip';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast({
+          title: 'Download complete!',
+          description: 'Your zip file has been downloaded.',
+        });
+      } catch (e: any) {
+        toast({
+          variant: 'destructive',
+          title: 'Error generating zip',
+          description: e.message,
+        });
+      } finally {
+        setIsZipping(false);
+        setIsLoading(false);
+      }
     } else {
       const scripts = generateScripts(course, config);
       const content = type === 'bash' ? scripts.bash : scripts.cmd;
@@ -52,11 +70,21 @@ export function PreviewPanel({ course, config, error, isLoading }: PreviewPanelP
   const filesPerTopic = config.filesInTopic.split(',').map(f => f.trim()).filter(Boolean);
 
   const renderContent = () => {
-    if (isLoading) {
+    if (isLoading && !isZipping) {
       return (
         <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
           <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-          <p className="text-lg">Generating structure...</p>
+          <p className="text-lg">Parsing timestamps...</p>
+        </div>
+      );
+    }
+    
+    if (isZipping) {
+      return (
+        <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+          <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+          <p className="text-lg">Generating zip file...</p>
+          {config.aiContentEnabled && <p className="text-sm text-center mt-2">This may take a moment as AI is generating file content.</p>}
         </div>
       );
     }
@@ -99,7 +127,7 @@ export function PreviewPanel({ course, config, error, isLoading }: PreviewPanelP
                     <ul className="pl-6 mt-1 space-y-1 border-l border-border ml-2">
                       {filesPerTopic.map(file => (
                         <li key={file} className="flex items-center">
-                          <File className="h-4 w-4 mr-2 text-muted-foreground flex-shrink-0" />
+                          {config.aiContentEnabled ? <Sparkles className="h-4 w-4 mr-2 text-primary flex-shrink-0" /> : <File className="h-4 w-4 mr-2 text-muted-foreground flex-shrink-0" /> }
                           <span className="text-muted-foreground">{file}</span>
                         </li>
                       ))}
@@ -128,14 +156,14 @@ export function PreviewPanel({ course, config, error, isLoading }: PreviewPanelP
         <div className="mt-4">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button className="w-full" disabled={!course || isZipping}>
-                {isZipping ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+              <Button className="w-full" disabled={!course || isLoading}>
+                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
                 Download Options
                 <ChevronDown className="ml-2 h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56" align="end">
-              <DropdownMenuItem onClick={() => handleDownload('zip')} disabled={isZipping}>
+              <DropdownMenuItem onClick={() => handleDownload('zip')} disabled={isLoading}>
                 <Download className="mr-2 h-4 w-4" />
                 <span>Download .zip archive</span>
               </DropdownMenuItem>

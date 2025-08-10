@@ -12,7 +12,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { FileText, Settings } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { FileText, Settings, Sparkles } from 'lucide-react';
 
 interface InputPanelProps {
   setCourse: (course: Course | null) => void;
@@ -117,6 +118,22 @@ export function InputPanel({ setCourse, config, setConfig, isLoading, setError }
               id="files-in-topic"
               value={config.filesInTopic}
               onChange={(e) => setConfig({ ...config, filesInTopic: e.target.value })}
+            />
+          </div>
+           <div className="flex items-center justify-between space-x-2 rounded-lg border p-3">
+            <div className="space-y-0.5">
+              <Label htmlFor="ai-content" className="flex items-center">
+                <Sparkles className="mr-2 h-4 w-4 text-primary" />
+                AI-Generated File Content
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Automatically generate starter content for each file.
+              </p>
+            </div>
+            <Switch
+              id="ai-content"
+              checked={config.aiContentEnabled}
+              onCheckedChange={(checked) => setConfig({ ...config, aiContentEnabled: checked })}
             />
           </div>
         </div>
