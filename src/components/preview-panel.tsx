@@ -5,13 +5,12 @@ import { useState } from 'react';
 import type { Course, StructureConfig } from '@/lib/course-utils';
 import { generateScripts, formatName } from '@/lib/course-utils';
 import { generateZip } from '@/lib/zip-utils';
-import { suggestFilesForTopic } from '@/ai/flows/suggest-files-flow';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Folder, File, Download, Loader2, Code, Terminal, AlertTriangle, ChevronDown, Wand2 } from 'lucide-react';
+import { Folder, File, Download, Loader2, Code, Terminal, AlertTriangle, ChevronDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface PreviewPanelProps {
@@ -25,7 +24,6 @@ interface PreviewPanelProps {
 
 export function PreviewPanel({ course, setCourse, config, error, isLoading, setIsLoading }: PreviewPanelProps) {
   const [isZipping, setIsZipping] = useState(false);
-  const [isSuggesting, setIsSuggesting] = useState<string | false>(false);
   const { toast } = useToast();
 
   const handleFileChange = (sectionIndex: number, topicIndex: number, newFiles: string) => {
@@ -33,67 +31,6 @@ export function PreviewPanel({ course, setCourse, config, error, isLoading, setI
     const newCourse = [...course];
     newCourse[sectionIndex].topics[topicIndex].files = newFiles;
     setCourse(newCourse);
-  };
-
-  const handleSuggestFiles = async () => {
-    if (!course) return;
-    
-    const originalCourse: Course = JSON.parse(JSON.stringify(course));
-    let errors = 0;
-
-    for (const section of course) {
-      for (const topic of section.topics) {
-        setIsSuggesting(`${section.title} - ${topic.title}`);
-        try {
-          const result = await suggestFilesForTopic({ topicTitle: topic.title });
-          // We need to update the course state immutably inside the loop
-          // to see changes reflected immediately.
-          setCourse(currentCourse => {
-            if (!currentCourse) return originalCourse;
-            const newCourse = JSON.parse(JSON.stringify(currentCourse));
-            const targetSection = newCourse.find((s: any) => s.title === section.title && s.index === section.index);
-            if (targetSection) {
-              const targetTopic = targetSection.topics.find((t: any) => t.title === topic.title && t.index === topic.index);
-              if (targetTopic) {
-                targetTopic.files = result.files;
-              }
-            }
-            return newCourse;
-          });
-        } catch (e: any) {
-          errors++;
-          console.error(`Error suggesting files for "${topic.title}":`, e);
-          // Set files to empty on error to indicate failure
-           setCourse(currentCourse => {
-            if (!currentCourse) return originalCourse;
-            const newCourse = JSON.parse(JSON.stringify(currentCourse));
-            const targetSection = newCourse.find((s: any) => s.title === section.title && s.index === section.index);
-            if (targetSection) {
-              const targetTopic = targetSection.topics.find((t: any) => t.title === topic.title && t.index === topic.index);
-              if (targetTopic) {
-                targetTopic.files = "Error suggesting files.";
-              }
-            }
-            return newCourse;
-          });
-        }
-      }
-    }
-    
-    setIsSuggesting(false);
-
-    if (errors > 0) {
-       toast({
-        variant: 'destructive',
-        title: 'Error suggesting files',
-        description: `Could not get suggestions for ${errors} topic(s). This might be due to rate limits. Please try again in a minute.`,
-      });
-    } else {
-      toast({
-        title: 'AI Suggestions Complete!',
-        description: 'File suggestions have been added for each topic.',
-      });
-    }
   };
 
   const handleDownload = async (type: 'zip' | 'bash' | 'cmd') => {
@@ -179,7 +116,6 @@ export function PreviewPanel({ course, setCourse, config, error, isLoading, setI
               <ul className="pl-6 mt-1 space-y-1 border-l border-border ml-2">
                 {section.topics.map((topic, topicIndex) => {
                   const filesPerTopic = (topic.files || 'notes.md').split(',').map(f => f.trim()).filter(Boolean);
-                   const isSuggestingThis = isSuggesting === `${section.title} - ${topic.title}`;
                   return (
                   <li key={topic.title + topicIndex}>
                      <div className="flex items-center">
@@ -194,23 +130,15 @@ export function PreviewPanel({ course, setCourse, config, error, isLoading, setI
                             onChange={(e) => handleFileChange(sectionIndex, topicIndex, e.target.value)}
                             placeholder="e.g. notes.md, main.py"
                             className="h-8 text-xs"
-                            disabled={!!isSuggesting}
                          />
                       </div>
                       <ul className="pl-1 space-y-1">
-                        {isSuggestingThis ? (
-                          <li className="flex items-center text-muted-foreground">
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            <span>Suggesting...</span>
-                          </li>
-                        ) : (
-                          filesPerTopic.map(file => (
+                          {filesPerTopic.map(file => (
                             <li key={file} className="flex items-center">
                               <div className="w-4 mr-2" />
                               <span className="text-muted-foreground text-xs font-mono">{file}</span>
                             </li>
-                          ))
-                        )}
+                          ))}
                       </ul>
                     </div>
                   </li>
@@ -232,10 +160,6 @@ export function PreviewPanel({ course, setCourse, config, error, isLoading, setI
               <CardTitle className="font-headline text-2xl">2. Preview & Download</CardTitle>
               <CardDescription>Review the generated structure and download the files.</CardDescription>
             </div>
-            <Button variant="outline" size="sm" onClick={handleSuggestFiles} disabled={!course || !!isSuggesting}>
-              <Wand2 className="mr-2 h-4 w-4" />
-              {isSuggesting ? 'Suggesting...' : 'Suggest Files'}
-            </Button>
           </div>
       </CardHeader>
       <CardContent className="flex flex-col h-[calc(100%-150px)]">
@@ -247,17 +171,11 @@ export function PreviewPanel({ course, setCourse, config, error, isLoading, setI
             </div>
           ) : renderContent()}
         </div>
-         {isSuggesting && (
-          <div className="text-center text-xs text-muted-foreground mt-2 truncate px-4">
-            <Loader2 className="h-3 w-3 mr-1.5 inline-block animate-spin" />
-            Getting suggestions for: {isSuggesting}
-          </div>
-        )}
         <div className="mt-4">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button className="w-full" disabled={!course || isLoading || isZipping || !!isSuggesting}>
-                {(isZipping || isSuggesting) ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+              <Button className="w-full" disabled={!course || isLoading || isZipping}>
+                {isZipping ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
                 Download Options
                 <ChevronDown className="ml-2 h-4 w-4" />
               </Button>
@@ -282,5 +200,3 @@ export function PreviewPanel({ course, setCourse, config, error, isLoading, setI
     </Card>
   );
 }
-
-    
