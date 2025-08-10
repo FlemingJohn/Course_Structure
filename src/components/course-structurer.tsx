@@ -8,9 +8,9 @@ import { PreviewPanel } from '@/components/preview-panel';
 export function CourseStructurer() {
   const [course, setCourse] = useState<Course | null>(null);
   const [config, setConfig] = useState<StructureConfig>({
-    sectionDirFormat: '{index_padded}. {title}',
+    sectionDirFormat: 'Enter the Course Name ',
     topicDirFormat: '{index_padded}. {title}',
-    filesInTopic: 'notes.md',
+    filesInTopic: 'filename.extension',
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
