@@ -2,6 +2,7 @@ export interface Topic {
   title: string;
   timestamp?: string;
   index: number;
+  files: string;
 }
 
 export interface Section {
@@ -14,7 +15,6 @@ export type Course = Section[];
 
 export interface StructureConfig {
   sectionDirFormat: string;
-  topicDirFormat:string;
   filesInTopic: string;
 }
 
@@ -25,7 +25,7 @@ const cleanTitle = (title: string): string => {
   return title.replace(emojiRegex, '').replace(hashtagRegex, '').trim();
 };
 
-export const parseTimestamps = (text: string): Course => {
+export const parseTimestamps = (text: string, config: StructureConfig): Course => {
   const lines = text.split('\n').filter(line => line.trim() !== '');
   const course: Course = [];
   let currentSection: Section | null = null;
@@ -47,7 +47,7 @@ export const parseTimestamps = (text: string): Course => {
       }
       topicIndex++;
       const title = cleanedLine.replace(timestampRegex, '').replace(/[-–—]/, '').trim();
-      currentSection.topics.push({ title, timestamp: timestampMatch[0], index: topicIndex });
+      currentSection.topics.push({ title, timestamp: timestampMatch[0], index: topicIndex, files: config.filesInTopic });
     } else {
       if(cleanedLine) {
         sectionIndex++;
@@ -86,8 +86,7 @@ export const formatName = (template: string, data: Record<string, string | numbe
 export const generateScripts = (course: Course, config: StructureConfig): { bash: string, cmd: string } => {
     let bashScript = '#!/bin/bash\n# Script to generate course structure\n\n';
     let cmdScript = '@echo off\nrem Script to generate course structure\n\n';
-
-    const filesPerTopic = config.filesInTopic.split(',').map(f => f.trim()).filter(Boolean);
+    const topicDirFormat = '{index_padded}. {title}';
 
     course.forEach(section => {
         const sectionDir = formatName(config.sectionDirFormat, { index: section.index, title: section.title });
@@ -95,11 +94,12 @@ export const generateScripts = (course: Course, config: StructureConfig): { bash
         cmdScript += `mkdir "${sectionDir}"\n`;
 
         section.topics.forEach(topic => {
-            const topicDir = formatName(config.topicDirFormat, { index: topic.index, title: topic.title, section_index: section.index, section_title: section.title });
+            const topicDir = formatName(topicDirFormat, { index: topic.index, title: topic.title, section_index: section.index, section_title: section.title });
             const fullPath = `${sectionDir}/${topicDir}`;
             bashScript += `mkdir -p "${fullPath}"\n`;
             cmdScript += `mkdir "${fullPath.replace(/\//g, '\\')}"\n`;
-
+            
+            const filesPerTopic = (topic.files || '').split(',').map(f => f.trim()).filter(Boolean);
             filesPerTopic.forEach(file => {
                 bashScript += `touch "${fullPath}/${file}"\n`;
                 cmdScript += `type NUL > "${fullPath.replace(/\//g, '\\')}\\${file}"\n`;
