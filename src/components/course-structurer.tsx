@@ -10,7 +10,6 @@ export function CourseStructurer() {
   const [config, setConfig] = useState<StructureConfig>({
     sectionDirFormat: '{index_padded}. {title}',
     topicDirFormat: '{index_padded}. {title}',
-    filesInTopic: 'notes.md',
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -27,6 +26,7 @@ export function CourseStructurer() {
       />
       <PreviewPanel
         course={course}
+        setCourse={setCourse}
         config={config}
         error={error}
         isLoading={isLoading}

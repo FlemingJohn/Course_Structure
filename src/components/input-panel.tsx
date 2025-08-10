@@ -16,8 +16,8 @@ import { FileText, Settings } from 'lucide-react';
 
 interface InputPanelProps {
   setCourse: (course: Course | null) => void;
-  config: StructureConfig;
-  setConfig: (config: Omit<StructureConfig, 'aiContentEnabled'>) => void;
+  config: Omit<StructureConfig, 'filesInTopic'>;
+  setConfig: (config: Omit<StructureConfig, 'filesInTopic'>) => void;
   isLoading: boolean;
   setIsLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
@@ -109,14 +109,6 @@ export function InputPanel({ setCourse, config, setConfig, isLoading, setError }
               id="topic-format"
               value={config.topicDirFormat}
               onChange={(e) => setConfig({ ...config, topicDirFormat: e.target.value })}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="files-in-topic">Files per Topic (comma-separated)</Label>
-            <Input
-              id="files-in-topic"
-              value={config.filesInTopic}
-              onChange={(e) => setConfig({ ...config, filesInTopic: e.target.value })}
             />
           </div>
         </div>

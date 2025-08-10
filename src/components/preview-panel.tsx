@@ -2,33 +2,79 @@
 
 import { useState } from 'react';
 import type { Course, StructureConfig } from '@/lib/course-utils';
-import { generateScripts, formatName, sanitizeForFilename } from '@/lib/course-utils';
+import { generateScripts, formatName } from '@/lib/course-utils';
 import { generateZip } from '@/lib/zip-utils';
+import { suggestFilesForTopic } from '@/ai/flows/suggest-files-flow';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Folder, File, Download, Loader2, Code, Terminal, AlertTriangle, ChevronDown } from 'lucide-react';
+import { Folder, File, Download, Loader2, Code, Terminal, AlertTriangle, ChevronDown, Wand2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface PreviewPanelProps {
   course: Course | null;
+  setCourse: (course: Course) => void;
   config: StructureConfig;
   error: string | null;
   isLoading: boolean;
   setIsLoading: (loading: boolean) => void;
 }
 
-export function PreviewPanel({ course, config, error, isLoading, setIsLoading }: PreviewPanelProps) {
+export function PreviewPanel({ course, setCourse, config, error, isLoading, setIsLoading }: PreviewPanelProps) {
   const [isZipping, setIsZipping] = useState(false);
+  const [isSuggesting, setIsSuggesting] = useState(false);
   const { toast } = useToast();
+
+  const handleFileChange = (sectionIndex: number, topicIndex: number, newFiles: string) => {
+    if (!course) return;
+    const newCourse = [...course];
+    newCourse[sectionIndex].topics[topicIndex].files = newFiles;
+    setCourse(newCourse);
+  };
+
+  const handleSuggestFiles = async () => {
+    if (!course) return;
+    setIsSuggesting(true);
+    try {
+      const newCourse: Course = JSON.parse(JSON.stringify(course));
+      const allSuggestions = newCourse.flatMap(section => 
+        section.topics.map(topic => 
+          suggestFilesForTopic({ topicTitle: topic.title })
+        )
+      );
+
+      const results = await Promise.all(allSuggestions);
+
+      let resultIndex = 0;
+      for (const section of newCourse) {
+        for (const topic of section.topics) {
+          topic.files = results[resultIndex].files;
+          resultIndex++;
+        }
+      }
+      setCourse(newCourse);
+      toast({
+        title: 'AI Suggestions Complete!',
+        description: 'File suggestions have been added for each topic.',
+      });
+    } catch (e: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Error suggesting files',
+        description: e.message,
+      });
+    } finally {
+      setIsSuggesting(false);
+    }
+  };
 
   const handleDownload = async (type: 'zip' | 'bash' | 'cmd') => {
     if (!course) return;
 
     if (type === 'zip') {
       setIsZipping(true);
-      setIsLoading(true);
       try {
         const blob = await generateZip(course, config);
         const link = document.createElement('a');
@@ -49,7 +95,6 @@ export function PreviewPanel({ course, config, error, isLoading, setIsLoading }:
         });
       } finally {
         setIsZipping(false);
-        setIsLoading(false);
       }
     } else {
       const scripts = generateScripts(course, config);
@@ -67,23 +112,12 @@ export function PreviewPanel({ course, config, error, isLoading, setIsLoading }:
     }
   };
   
-  const filesPerTopic = config.filesInTopic.split(',').map(f => f.trim()).filter(Boolean);
-
   const renderContent = () => {
-    if (isLoading && !isZipping) {
+    if (isLoading) {
       return (
         <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
           <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
           <p className="text-lg">Parsing timestamps...</p>
-        </div>
-      );
-    }
-    
-    if (isZipping) {
-      return (
-        <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-          <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-          <p className="text-lg">Generating zip file...</p>
         </div>
       );
     }
@@ -117,22 +151,42 @@ export function PreviewPanel({ course, config, error, isLoading, setIsLoading }:
                 <span className="font-bold">{formatName(config.sectionDirFormat, { index: section.index, title: section.title })}</span>
               </div>
               <ul className="pl-6 mt-1 space-y-1 border-l border-border ml-2">
-                {section.topics.map((topic, topicIndex) => (
+                {section.topics.map((topic, topicIndex) => {
+                  const filesPerTopic = (topic.files || 'notes.md').split(',').map(f => f.trim()).filter(Boolean);
+                  return (
                   <li key={topic.title + topicIndex}>
                      <div className="flex items-center">
                       <Folder className="h-4 w-4 mr-2 text-primary flex-shrink-0" />
                       <span>{formatName(config.topicDirFormat, { index: topic.index, title: topic.title, section_index: section.index, section_title: section.title })}</span>
                     </div>
-                    <ul className="pl-6 mt-1 space-y-1 border-l border-border ml-2">
-                      {filesPerTopic.map(file => (
-                        <li key={file} className="flex items-center">
-                          <File className="h-4 w-4 mr-2 text-muted-foreground flex-shrink-0" />
-                          <span className="text-muted-foreground">{file}</span>
-                        </li>
-                      ))}
-                    </ul>
+                    <div className="pl-6 mt-2 space-y-2 border-l border-border ml-2">
+                      <div className="flex items-center gap-2">
+                         <File className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                         <Input 
+                            value={topic.files || ''}
+                            onChange={(e) => handleFileChange(sectionIndex, topicIndex, e.target.value)}
+                            placeholder="e.g. notes.md, main.py"
+                            className="h-8 text-xs"
+                         />
+                      </div>
+                      <ul className="pl-1 space-y-1">
+                        {isSuggesting ? (
+                          <li className="flex items-center text-muted-foreground">
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            <span>Suggesting...</span>
+                          </li>
+                        ) : (
+                          filesPerTopic.map(file => (
+                            <li key={file} className="flex items-center">
+                              <div className="w-4 mr-2" />
+                              <span className="text-muted-foreground text-xs font-mono">{file}</span>
+                            </li>
+                          ))
+                        )}
+                      </ul>
+                    </div>
                   </li>
-                ))}
+                )})}
               </ul>
             </li>
           ))}
@@ -145,24 +199,37 @@ export function PreviewPanel({ course, config, error, isLoading, setIsLoading }:
   return (
     <Card className="bg-card rounded-[20px] shadow-[0_4px_12px_rgba(0,0,0,0.1)] h-full min-h-[580px] lg:min-h-0">
       <CardHeader>
-        <CardTitle className="font-headline text-2xl">2. Preview & Download</CardTitle>
-        <CardDescription>Review the generated structure and download the files.</CardDescription>
+         <div className="flex justify-between items-center">
+            <div>
+              <CardTitle className="font-headline text-2xl">2. Preview & Download</CardTitle>
+              <CardDescription>Review the generated structure and download the files.</CardDescription>
+            </div>
+            <Button variant="outline" size="sm" onClick={handleSuggestFiles} disabled={!course || isSuggesting}>
+              <Wand2 className="mr-2 h-4 w-4" />
+              {isSuggesting ? 'Suggesting...' : 'Suggest Files'}
+            </Button>
+          </div>
       </CardHeader>
       <CardContent className="flex flex-col h-[calc(100%-150px)]">
         <div className="flex-grow bg-background/50 rounded-lg p-4 min-h-[200px] max-h-[400px]">
-          {renderContent()}
+          {isZipping ? (
+             <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+              <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+              <p className="text-lg">Generating zip file...</p>
+            </div>
+          ) : renderContent()}
         </div>
         <div className="mt-4">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button className="w-full" disabled={!course || isLoading}>
-                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+              <Button className="w-full" disabled={!course || isLoading || isZipping}>
+                {isZipping ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
                 Download Options
                 <ChevronDown className="ml-2 h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56" align="end">
-              <DropdownMenuItem onClick={() => handleDownload('zip')} disabled={isLoading}>
+              <DropdownMenuItem onClick={() => handleDownload('zip')} disabled={isZipping}>
                 <Download className="mr-2 h-4 w-4" />
                 <span>Download .zip archive</span>
               </DropdownMenuItem>
