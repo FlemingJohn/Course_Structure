@@ -103,14 +103,6 @@ export function InputPanel({ setCourse, config, setConfig, isLoading, setError }
               onChange={(e) => setConfig({ ...config, sectionDirFormat: e.target.value })}
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="topic-format">Topic Folder Format</Label>
-            <Input
-              id="topic-format"
-              value={config.topicDirFormat}
-              onChange={(e) => setConfig({ ...config, topicDirFormat: e.target.value })}
-            />
-          </div>
         </div>
       </CardContent>
     </Card>

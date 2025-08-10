@@ -157,7 +157,7 @@ export function PreviewPanel({ course, setCourse, config, error, isLoading, setI
                   <li key={topic.title + topicIndex}>
                      <div className="flex items-center">
                       <Folder className="h-4 w-4 mr-2 text-primary flex-shrink-0" />
-                      <span>{formatName(config.topicDirFormat, { index: topic.index, title: topic.title, section_index: section.index, section_title: section.title })}</span>
+                      <span>{formatName('{index_padded}. {title}', { index: topic.index, title: topic.title, section_index: section.index, section_title: section.title })}</span>
                     </div>
                     <div className="pl-6 mt-2 space-y-2 border-l border-border ml-2">
                       <div className="flex items-center gap-2">
