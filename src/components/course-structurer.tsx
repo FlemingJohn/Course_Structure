@@ -8,8 +8,8 @@ import { PreviewPanel } from '@/components/preview-panel';
 export function CourseStructurer() {
   const [course, setCourse] = useState<Course | null>(null);
   const [config, setConfig] = useState<StructureConfig>({
-    sectionDirFormat: '{index_padded}. {title}',
-    filesInTopic: 'notes.md',
+    sectionDirFormat: 'Enter the course name (eg: Java Full Course)',
+    filesInTopic: 'Enter the file format (eg: Main.java)',
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
