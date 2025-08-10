@@ -14,9 +14,16 @@ export type Course = Section[];
 
 export interface StructureConfig {
   sectionDirFormat: string;
-  topicDirFormat: string;
+  topicDirFormat:string;
   filesInTopic: string;
 }
+
+const cleanTitle = (title: string): string => {
+  // Removes emojis, hashtags, and leading/trailing whitespace
+  const emojiRegex = /([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g;
+  const hashtagRegex = /#\w+/g;
+  return title.replace(emojiRegex, '').replace(hashtagRegex, '').trim();
+};
 
 export const parseTimestamps = (text: string): Course => {
   const lines = text.split('\n').filter(line => line.trim() !== '');
@@ -29,6 +36,7 @@ export const parseTimestamps = (text: string): Course => {
 
   for (const line of lines) {
     const timestampMatch = line.match(timestampRegex);
+    const cleanedLine = cleanTitle(line);
 
     if (timestampMatch) {
       if (!currentSection) {
@@ -38,13 +46,15 @@ export const parseTimestamps = (text: string): Course => {
         course.push(currentSection);
       }
       topicIndex++;
-      const title = line.replace(timestampRegex, '').replace(/[-–—]/, '').trim();
+      const title = cleanedLine.replace(timestampRegex, '').replace(/[-–—]/, '').trim();
       currentSection.topics.push({ title, timestamp: timestampMatch[0], index: topicIndex });
     } else {
-      sectionIndex++;
-      topicIndex = 0;
-      currentSection = { title: line.trim(), topics: [], index: sectionIndex };
-      course.push(currentSection);
+      if(cleanedLine) {
+        sectionIndex++;
+        topicIndex = 0;
+        currentSection = { title: cleanedLine, topics: [], index: sectionIndex };
+        course.push(currentSection);
+      }
     }
   }
 
