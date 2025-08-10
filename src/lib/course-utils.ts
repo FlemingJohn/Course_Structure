@@ -18,12 +18,6 @@ export interface StructureConfig {
   filesInTopic: string;
 }
 
-export const getYoutubeVideoId = (url: string): string | null => {
-  const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/|youtube\.com\/shorts\/)([^"&?\/ ]{11})/;
-  const match = url.match(regex);
-  return match ? match[1] : null;
-};
-
 export const parseTimestamps = (text: string): Course => {
   const lines = text.split('\n').filter(line => line.trim() !== '');
   const course: Course = [];
