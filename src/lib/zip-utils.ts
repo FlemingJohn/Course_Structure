@@ -1,9 +1,8 @@
 import JSZip from 'jszip';
 import { generateScripts, formatName } from './course-utils';
 import type { Course, StructureConfig } from './course-utils';
-import { generateFileContent } from '@/ai/flows/generate-content-flow';
 
-export const generateZip = async (course: Course, config: StructureConfig): Promise<Blob> => {
+export const generateZip = async (course: Course, config: Omit<StructureConfig, 'aiContentEnabled'>): Promise<Blob> => {
   const zip = new JSZip();
 
   const filesPerTopic = config.filesInTopic.split(',').map(f => f.trim()).filter(Boolean);
@@ -17,20 +16,7 @@ export const generateZip = async (course: Course, config: StructureConfig): Prom
         const topicFolder = sectionFolder.folder(topicDirName);
         if (topicFolder) {
           for (const file of filesPerTopic) {
-            let content = '';
-            if (config.aiContentEnabled) {
-              try {
-                const result = await generateFileContent({
-                  topicTitle: topic.title,
-                  fileName: file,
-                });
-                content = result.content;
-              } catch (e) {
-                console.error(`AI content generation failed for ${file}:`, e);
-                content = `// AI content generation failed for this file.`;
-              }
-            }
-            topicFolder.file(file, content);
+            topicFolder.file(file, '');
           }
         }
       }
