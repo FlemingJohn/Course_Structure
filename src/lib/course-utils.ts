@@ -16,7 +16,6 @@ export interface StructureConfig {
   sectionDirFormat: string;
   topicDirFormat: string;
   filesInTopic: string;
-  aiContentEnabled: boolean;
 }
 
 export const parseTimestamps = (text: string): Course => {

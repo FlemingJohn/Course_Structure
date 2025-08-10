@@ -11,7 +11,6 @@ export function CourseStructurer() {
     sectionDirFormat: '{index_padded}. {title}',
     topicDirFormat: '{index_padded}. {title}',
     filesInTopic: 'notes.md',
-    aiContentEnabled: false,
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
